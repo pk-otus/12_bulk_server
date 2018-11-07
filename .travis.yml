@@ -1,0 +1,31 @@
+language: cpp
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-7
+before_script:
+  - sudo apt-get update
+  - export CXX=/usr/bin/g++-7
+  - export CC=/usr/bin/gcc-7
+  - sudo apt-get install libboost-system-dev -y
+  - sudo apt-get install libgtest-dev cmake -y
+
+  - cd /usr/src/gtest
+  - sudo cmake .
+  - sudo make
+  - sudo cp *.a /usr/lib
+  - cd "${TRAVIS_BUILD_DIR}"   
+  
+script: 
+  - cmake .
+  - cmake --build .
+  - cmake --build . --target test  
+  - cmake --build . --target package  
+deploy: 
+  - provider: script
+    skip_cleanup: true
+    script:       
+     - curl -T bulk_server-0.0.$TRAVIS_BUILD_NUMBER-Linux.deb -upk-otus:$BINTRAY_API_KEY "https://api.bintray.com/content/pk-otus/OTUS/bulk_server/$TRAVIS_BUILD_NUMBER/bulk_server.$TRAVIS_BUILD_NUMBER-Linux.deb;deb_distribution=trusty;deb_component=main;deb_architecture=amd64;publish=1" 
+  
