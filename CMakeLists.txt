@@ -13,16 +13,16 @@ set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 file(GLOB HEADER_FILES ${INCLUDE_DIR}/*.h)
 add_executable(bulk_server ${HEADER_FILES} main.cpp)
 
-add_executable(bulk_server_tests ${HEADER_FILES} test/test_main.cpp)
-
-set_target_properties(bulk_server_tests PROPERTIES INCLUDE_DIRECTORIES ${GTEST_INCLUDE_DIRS} )
-
 set_target_properties(bulk_server PROPERTIES
 	CXX_STANDARD 14
 	CXX_STANDARD_REQUIRED ON
 	COMPILE_DEFINITIONS BOOST_TEST_DYN_LINK
 	INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIR};${INCLUDE_DIR}"
 )
+
+enable_testing()
+add_executable(bulk_server_tests ${HEADER_FILES} test/test_main.cpp)
+set_target_properties(bulk_server_tests PROPERTIES INCLUDE_DIRECTORIES ${GTEST_INCLUDE_DIRS} )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	set_target_properties(bulk_server PROPERTIES COMPILE_OPTIONS -W3)
@@ -35,7 +35,6 @@ else()
 	target_link_libraries(bulk_server_tests pthread)
 endif()
 
-enable_testing()
 add_test(test1	bulk_server_tests)
 
 install(TARGETS bulk_server RUNTIME DESTINATION bin)
