@@ -10,6 +10,7 @@ find_package(GTest REQUIRED)
 find_package(Boost COMPONENTS system REQUIRED)
 
 set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(TEST_DIR ${PROJECT_SOURCE_DIR}/test)
 file(GLOB HEADER_FILES ${INCLUDE_DIR}/*.h)
 add_executable(bulk_server ${HEADER_FILES} main.cpp)
 
@@ -36,6 +37,11 @@ else()
 endif()
 
 add_test(test1	bulk_server_tests)
+
+configure_file(${TEST_DIR}/seq_a.sh seq_a.sh COPYONLY)
+configure_file(${TEST_DIR}/seq_b.sh seq_b.sh COPYONLY)
+configure_file(${TEST_DIR}/seq_c.sh seq_c.sh COPYONLY)
+configure_file(${TEST_DIR}/seq_d.sh seq_d.sh COPYONLY)
 
 install(TARGETS bulk_server RUNTIME DESTINATION bin)
 

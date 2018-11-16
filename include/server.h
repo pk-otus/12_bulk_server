@@ -42,11 +42,12 @@ namespace bulk_server
 					std::unique_lock<std::mutex> lock(guard_mutex);
 					cond_var.wait(lock, [this]() { return !q.empty(); });
 
-					auto cmd = q.front();
-					q.pop();
+					while (!q.empty())
+					{
+						q.front()->log_all();
+						q.pop();						
+					}
 					lock.unlock();
-
-					handler_fixed.handle_command(cmd);
 				}
 				catch (const std::exception &e) 
 				{
@@ -86,25 +87,50 @@ namespace bulk_server
 						unhandled = unhandled.substr(pos_end + 1);
 						pos_end = unhandled.find('\n');
 
-						if (!cmd.empty())
+						if (cmd.empty()) continue;
+						
+						if (1 == cmd.size())
 						{
-							if (1 == cmd.size() && handler_bracketed.try_handle_special(cmd[0]))
+							switch (cmd[0])
+							{
+							case '{':
+								if (!handler_bracketed.inside_brackets())
+								{
+									std::lock_guard<std::mutex> lock(guard_mutex);
+									needs_notify = flush_fixed();
+								}
+								handler_bracketed.open_bracket();
 								continue;
-
-							if (handler_bracketed.inside_brackets())
+							case '}':
+								if (handler_bracketed.inside_brackets())
+								{
+									handler_bracketed.close_bracket();
+									if (!handler_bracketed.inside_brackets())
+									{
+										needs_notify = flush_bracketed(handler_bracketed);
+									}
+								}
+								continue;
+							}								
+						}
+						
+						if (handler_bracketed.inside_brackets())
+						{
+							handler_bracketed.add_command(cmd);
+						}
+						else								
+						{							
+							std::lock_guard<std::mutex> lock(guard_mutex);
+							if (handler_fixed.add_command(cmd))
 							{
-								handler_bracketed.handle_command(cmd);
-							}
-							else								
-							{
-								std::lock_guard<std::mutex> lock(guard_mutex);
-								q.push(cmd);
-								needs_notify = true;
-							}
-						}						
+								needs_notify = flush_fixed();
+							}																
+						}										
 					}
 					if (needs_notify)
+					{
 						cond_var.notify_one();
+					}
 
 				}
 				catch (const std::exception &e) 
@@ -114,6 +140,28 @@ namespace bulk_server
 				}
 			}
 		}
+
+		bool flush_fixed()
+		{			
+			if (auto cmd = handler_fixed.flush_data())
+			{				
+				q.push(std::move(cmd));
+				return true;
+			}
+			return false;
+		}
+
+		bool flush_bracketed(bracketed_handler& handler)
+		{				
+			if (auto cmd = handler.flush_data())
+			{				
+				std::lock_guard<std::mutex> lock(guard_mutex);
+				q.push(std::move(cmd));
+				return true;
+			}
+			return false;
+		}
+
 		ba::io_service			service;
 		ba::ip::tcp::acceptor	acc;
 
@@ -122,7 +170,7 @@ namespace bulk_server
 
 		std::mutex				guard_mutex;
 		std::condition_variable	cond_var;
-		std::queue<std::string> q;
+		std::queue<std::unique_ptr<commands_block>> q;
 
 	};
 }

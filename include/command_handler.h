@@ -20,23 +20,18 @@ namespace bulk_server
 				commands->final_flush();		
 		}
 
-		void handle_command(const std::string& cmd)
+		bool add_command(const std::string& cmd)
 		{
 			if (!commands)
 				commands = create_command_block(generate_file_name());
 
 			commands->add_command(cmd);
-			if (commands->is_full())
-				flush();
+			return commands->is_full();				
 		}
-	protected:
-		void flush()
+
+		std::unique_ptr<commands_block> flush_data()
 		{
-			if (commands)
-			{
-				commands->log_all();
-				commands = nullptr;
-			}
+			return std::move(commands);
 		}
 	private:
 		virtual std::unique_ptr<commands_block> create_command_block(const std::string& fname) = 0;
@@ -83,25 +78,8 @@ namespace bulk_server
 
 		bool inside_brackets() const { return 0 != count_brackets; }
 
-		bool try_handle_special(char ch)
-		{
-			if ('{' == ch)
-			{
-				if (!inside_brackets()) flush();
-				++count_brackets;
-				return true;
-			}
-			if ('}' == ch)
-			{
-				if (inside_brackets())
-				{
-					--count_brackets;
-					if (!inside_brackets()) flush();
-				}
-				return true;
-			}
-			return false;
-		}
+		void open_bracket() { ++count_brackets; }
+		void close_bracket() { --count_brackets; }
 
 	private:
 		std::unique_ptr<commands_block> create_command_block(const std::string& fname) override

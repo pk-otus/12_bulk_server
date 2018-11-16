@@ -10,9 +10,25 @@ int main(int argc, char const *argv[])
 
 	try
 	{
-		size_t port = std::stoi(argv[1]);
-		size_t sz = std::stoi(argv[2]);
+		size_t port = 9999, sz = 3;
+		try
+		{
+			port = std::stoi(argv[1]);
+		}
+		catch (std::exception& e)
+		{
+			throw std::invalid_argument("cannot parse server port");
+		}
 
+		try
+		{
+			sz = std::stoi(argv[2]);
+		}
+		catch (std::exception& e)
+		{
+			throw std::invalid_argument("cannot bulk size");
+		}
+				
 		bulk_server::server srv(port, sz);
 
 		while (true)

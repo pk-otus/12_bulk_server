@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <iterator>
 #include <iostream>
 
 namespace bulk_server
